@@ -1,5 +1,5 @@
 [package]
-name = "plotter"
+name = "slammer"
 version = "0.1.0"
 authors = ["Ted <ted.pinkerton@mail.utoronto.ca>"]
 edition = "2021"
@@ -7,7 +7,7 @@ resolver = "2"
 rust-version = "1.77"
 
 [[bin]]
-name = "plotter"
+name = "slammer"
 harness = false  # do not use the built in cargo test harness -> resolve rust-analyzer errors
 
 [profile.release]
@@ -23,12 +23,18 @@ default = []
 experimental = ["esp-idf-svc/experimental"]
 
 [dependencies]
+esp-idf-hal = { version = "0.45" }
 log = "0.4"
 esp-idf-svc = { version = "0.51", features = [
   "critical-section",
   "embassy-time-driver",
   "embassy-sync",
 ] }
+anyhow = "1.0"
+embedded-svc = "0.28"
+embedded-hal = "1.0"
+heapless = "0.8"
 
 [build-dependencies]
 embuild = "0.33"
+toml = "0.8"
