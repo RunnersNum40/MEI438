@@ -29,6 +29,16 @@ impl<'a> FrameBuffer<'a> {
     pub fn timestamp(&self) -> camera::timeval {
         unsafe { (*self.fb).timestamp }
     }
+
+    pub fn fb_return(&self) {
+        unsafe { camera::esp_camera_fb_return(self.fb) }
+    }
+}
+
+impl Drop for FrameBuffer<'_> {
+    fn drop(&mut self) {
+        self.fb_return();
+    }
 }
 
 pub struct CameraSensor<'a> {
@@ -214,28 +224,31 @@ pub struct Camera<'a> {
 impl<'a> Camera<'a> {
     pub fn new(
         pin_pwdn: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
-        pin_reset: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
         pin_xclk: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
         pin_d0: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
         pin_d1: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
         pin_d2: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
         pin_d3: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
-        pin_d4: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
-        pin_d5: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
-        pin_d6: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
-        pin_d7: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
+        pin_d4: impl Peripheral<P = impl InputPin> + 'a,
+        pin_d5: impl Peripheral<P = impl InputPin> + 'a,
+        pin_d6: impl Peripheral<P = impl InputPin> + 'a,
+        pin_d7: impl Peripheral<P = impl InputPin> + 'a,
         pin_vsync: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
         pin_href: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
         pin_pclk: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
+        pin_sda: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
+        pin_scl: impl Peripheral<P = impl InputPin + OutputPin> + 'a,
+        pixel_format: camera::pixformat_t,
+        frame_size: camera::framesize_t,
     ) -> Result<Self, esp_idf_sys::EspError> {
         esp_idf_hal::into_ref!(
-            pin_pwdn, pin_reset, pin_xclk, pin_d0, pin_d1, pin_d2, pin_d3, pin_d4, pin_d5, pin_d6,
-            pin_d7, pin_vsync, pin_href, pin_pclk
+            pin_pwdn, pin_xclk, pin_d0, pin_d1, pin_d2, pin_d3, pin_d4, pin_d5, pin_d6, pin_d7,
+            pin_vsync, pin_href, pin_pclk, pin_sda, pin_scl
         );
         let config = camera::camera_config_t {
             pin_pwdn: pin_pwdn.pin(),
-            pin_reset: pin_reset.pin(),
             pin_xclk: pin_xclk.pin(),
+            pin_reset: 0xff,
 
             pin_d0: pin_d0.pin(),
             pin_d1: pin_d1.pin(),
@@ -253,12 +266,21 @@ impl<'a> Camera<'a> {
             ledc_timer: esp_idf_sys::ledc_timer_t_LEDC_TIMER_0,
             ledc_channel: esp_idf_sys::ledc_channel_t_LEDC_CHANNEL_0,
 
-            pixel_format: camera::pixformat_t_PIXFORMAT_RGB565,
-            frame_size: camera::framesize_t_FRAMESIZE_QVGA,
+            pixel_format,
+            frame_size,
 
-            jpeg_quality: 12,
+            jpeg_quality: 20,
             fb_count: 1,
             grab_mode: camera::camera_grab_mode_t_CAMERA_GRAB_WHEN_EMPTY,
+
+            fb_location: camera::camera_fb_location_t_CAMERA_FB_IN_DRAM,
+
+            __bindgen_anon_1: camera::camera_config_t__bindgen_ty_1 {
+                pin_sccb_sda: pin_sda.pin(),
+            },
+            __bindgen_anon_2: camera::camera_config_t__bindgen_ty_2 {
+                pin_sccb_scl: pin_scl.pin(),
+            },
 
             ..Default::default()
         };
@@ -269,14 +291,15 @@ impl<'a> Camera<'a> {
 
     pub fn get_framebuffer(&self) -> Option<FrameBuffer> {
         let fb = unsafe { camera::esp_camera_fb_get() };
-        return if fb.is_null() {
+        if fb.is_null() {
+            //unsafe { camera::esp_camera_fb_return(fb); }
             None
         } else {
             Some(FrameBuffer {
                 fb,
                 _p: PhantomData,
             })
-        };
+        }
     }
 
     pub fn sensor(&self) -> CameraSensor<'a> {

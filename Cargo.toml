@@ -23,6 +23,7 @@ default = []
 experimental = ["esp-idf-svc/experimental"]
 
 [dependencies]
+esp-idf-sys = "0.36"
 esp-idf-hal = { version = "0.45" }
 log = "0.4"
 esp-idf-svc = { version = "0.51", features = [
