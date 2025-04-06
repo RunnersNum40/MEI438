@@ -1,0 +1,15 @@
+[package]
+name = "esp-camera-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+esp-idf-hal = "0.45"
+esp-idf-sys = "0.36"
+
+[[package.metadata.esp-idf-sys.extra_components]]
+component_dirs = "esp32-camera"
+bindings_header = "bindings.h"
+bindings_module = "camera"

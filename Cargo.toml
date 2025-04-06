@@ -34,7 +34,10 @@ anyhow = "1.0"
 embedded-svc = "0.28"
 embedded-hal = "1.0"
 heapless = "0.8"
+esp-camera-rs = "*"
+
+[patch.crates-io]
+esp-camera-rs = { path = "esp-camera-rs" }
 
 [build-dependencies]
 embuild = "0.33"
-toml = "0.8"
