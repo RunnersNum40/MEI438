@@ -1,56 +1,71 @@
 use crate::motion::types::{FlowVector, Point2D};
 
-const WINDOW: usize = 3;
-
-pub fn track_keypoints(
+pub fn lk_optical_flow(
     prev: &[u8],
     curr: &[u8],
     width: usize,
     height: usize,
     points: &[Point2D],
 ) -> Vec<FlowVector> {
+    let window_radius = 1;
     let mut tracked = Vec::new();
 
     for &p in points {
         let x = p.x as isize;
         let y = p.y as isize;
 
-        let mut dx = 0.0;
-        let mut dy = 0.0;
-        let mut w = 0.0;
+        if x <= window_radius
+            || y <= window_radius
+            || x >= (width as isize - window_radius)
+            || y >= (height as isize - window_radius)
+        {
+            continue;
+        }
 
-        for j in -(WINDOW as isize)..=(WINDOW as isize) {
-            for i in -(WINDOW as isize)..=(WINDOW as isize) {
-                let px = x + i;
-                let py = y + j;
+        let mut sum_gx2 = 0.0;
+        let mut sum_gy2 = 0.0;
+        let mut sum_gxgy = 0.0;
+        let mut sum_gxit = 0.0;
+        let mut sum_gyit = 0.0;
 
-                if px < 1 || py < 1 || px >= (width as isize - 1) || py >= (height as isize - 1) {
-                    continue;
-                }
+        for j in -window_radius..=window_radius {
+            for i in -window_radius..=window_radius {
+                let idx = ((y + j) * width as isize + (x + i)) as usize;
 
-                let idx = (py * width as isize + px) as usize;
+                let idx_left = ((y + j) * width as isize + (x + i - 1)) as usize;
+                let idx_right = ((y + j) * width as isize + (x + i + 1)) as usize;
+                let idx_top = (((y + j - 1) * width as isize) + (x + i)) as usize;
+                let idx_bottom = (((y + j + 1) * width as isize) + (x + i)) as usize;
+                let gx = (prev[idx_right] as f32 - prev[idx_left] as f32) / 2.0;
+                let gy = (prev[idx_bottom] as f32 - prev[idx_top] as f32) / 2.0;
 
-                let prev_val = prev[idx] as f32;
-                let curr_val = curr[idx] as f32;
+                let it = curr[idx] as f32 - prev[idx] as f32;
 
-                let diff = curr_val - prev_val;
-
-                dx += i as f32 * diff;
-                dy += j as f32 * diff;
-                w += diff.abs();
+                sum_gx2 += gx * gx;
+                sum_gy2 += gy * gy;
+                sum_gxgy += gx * gy;
+                sum_gxit += gx * it;
+                sum_gyit += gy * it;
             }
         }
 
-        if w > 0.0 {
-            tracked.push(FlowVector {
-                from: p,
-                to: Point2D {
-                    x: p.x + dx / w,
-                    y: p.y + dy / w,
-                },
-            });
+        let det = sum_gx2 * sum_gy2 - sum_gxgy * sum_gxgy;
+        if det.abs() < 1e-6 {
+            continue;
         }
+
+        let u = (-sum_gy2 * sum_gxit + sum_gxgy * sum_gyit) / det;
+        let v = (sum_gxgy * sum_gxit - sum_gx2 * sum_gyit) / det;
+
+        tracked.push(FlowVector {
+            from: p,
+            to: Point2D {
+                x: p.x + u,
+                y: p.y + v,
+            },
+        });
     }
 
     tracked
 }
+

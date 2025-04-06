@@ -14,7 +14,7 @@ pub struct FlowVector {
 pub struct MotionEstimate {
     pub dx: f32,
     pub dy: f32,
-    pub valid_points: usize,
+    pub dtheta: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -33,8 +33,9 @@ impl Pose2D {
         }
     }
 
-    pub fn update(&mut self, dx: f32, dy: f32) {
+    pub fn update(&mut self, dx: f32, dy: f32, dtheta: f32) {
         self.x += dx;
         self.y += dy;
+        self.theta += dtheta;
     }
 }

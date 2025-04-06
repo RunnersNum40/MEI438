@@ -3,6 +3,7 @@ use esp_camera_rs::Camera;
 use esp_idf_hal::gpio;
 use esp_idf_sys::camera;
 
+#[derive(Clone)]
 pub struct Frame {
     pub data: Vec<u8>,
     pub width: usize,
@@ -34,12 +35,12 @@ impl CameraWrapper {
             pins.gpio26,
             pins.gpio27,
             camera::pixformat_t_PIXFORMAT_GRAYSCALE,
-            camera::framesize_t_FRAMESIZE_QQVGA,
+            camera::framesize_t_FRAMESIZE_128X128,
         )?;
         Ok(CameraWrapper {
             camera: cam,
-            width: 160,
-            height: 120,
+            width: 128,
+            height: 128,
         })
     }
 

@@ -1,16 +1,14 @@
+mod macros;
+use anyhow::Result;
+use esp_idf_hal::peripherals::Peripherals;
 use std::{
     sync::{Arc, Mutex},
     thread,
     time::Duration,
 };
-
-use anyhow::Result;
-use esp_idf_hal::peripherals::Peripherals;
-
 mod camera;
 mod motion;
-
-use camera::{CameraWrapper, Frame};
+use camera::CameraWrapper;
 use motion::{process_frame_pair, types::Pose2D};
 
 fn main() -> Result<()> {
@@ -32,10 +30,10 @@ fn main() -> Result<()> {
             Err(_) => continue,
         };
 
-        let estimate = process_frame_pair(&prev_frame, &curr_frame);
+        let estimate = process_frame_pair(prev_frame, curr_frame.clone());
 
         if let Ok(mut pose) = pose_clone.lock() {
-            pose.update(estimate.dx, estimate.dy);
+            pose.update(estimate.dx, estimate.dy, estimate.dtheta);
         }
 
         prev_frame = curr_frame;
@@ -44,9 +42,11 @@ fn main() -> Result<()> {
 
     loop {
         if let Ok(pose) = pose.lock() {
-            println!("Pose: x = {:.2}, y = {:.2}", pose.x, pose.y);
+            println!(
+                "Pose: x = {:.2}, y = {:.2}, theta = {:.2}",
+                pose.x, pose.y, pose.theta
+            );
         }
         thread::sleep(Duration::from_millis(500));
     }
 }
-
